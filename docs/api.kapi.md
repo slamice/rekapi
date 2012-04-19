@@ -15,11 +15,13 @@ Create a `Kapi` instance.  `canvas` is (typically) an HTML 5 `<canvas>` from the
 
 Functional properties of `opt_config`:
 
-* __fps__: The frames per second at which the animation updates.  The default value is 30.
-* __height__: The height to set upon `canvas`.
-* __width__: The width to set upon `canvas`.
-* __doRoundNumbers__: Force all calculated state values to be rounded to the nearest integer.  This is an optimization that generally equates to faster screen updates, but the quality of the animation may suffer.  `false` by default.
-* __clearOnUpdate__: Whether or not clear out the canvas before each new frame is drawn.  `true` by default.
+* __fps__: Number.  The frames per second at which the animation updates.  The default value is 30.
+* __height__: Number.  The height to set upon `canvas`.
+* __width__: Number.  The width to set upon `canvas`.
+* __doRoundNumbers__: Boolean.  Force all calculated state values to be rounded to the nearest integer.  This is an optimization that generally equates to faster screen updates, but the quality of the animation may suffer.  `false` by default.
+* __clearOnUpdate__: Boolean.  Whether or not clear out the canvas before each new frame is drawn.  `true` by default.
+
+__[Example](examples/kapi.html)__
 
 
 ### addActor
@@ -34,6 +36,8 @@ Kapi.prototype.addActor (actor)
 
 Add a `Kapi.Actor` to a `Kapi` instance.
 
+__[Example](examples/add_actor.html)__
+
 
 ### getActor
 
@@ -47,17 +51,21 @@ Kapi.prototype.getActor (actorId)
 
 Retrieve an `Actor` from the `Kapi` instance by its ID.  All `Actor`'s have an `id` property.
 
+__[Example](examples/get_actor.html)__
+
 
 ### getAllActors
 
 ````javascript
 /**
- * @returns {Kapi.Actor}
+ * @returns {Object}
  */
 Kapi.prototype.getAllActors ()
 ````
 
-Retrieve all `Actor`s in a `Kapi` instance as an Object.
+Retrieve all `Actor`s in a `Kapi` instance as an Object.  Actor IDs correspond to the property names of the returned Object.
+
+__[Example](examples/get_all_actors.html)__
 
 
 ### getActorIds
@@ -119,7 +127,7 @@ Move to a specific millisecond on the timeline and play from there.  `opt_howMan
  * @param {number=} opt_howManyTimes
  * @returns {Kapi}
  */
-Kapi.prototype.playFrom (opt_howManyTimes)
+Kapi.prototype.playFromCurrent (opt_howManyTimes)
 ````
 
 Play from the last frame that was drawn with `render()`. `opt_howManyTimes` works as it does in `play()`.
