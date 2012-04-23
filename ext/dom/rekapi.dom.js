@@ -1,5 +1,6 @@
-;(function rekapiDOM (global) {
+var rekapiDOM = function (global, deps) {
   var gk = global.Kapi;
+  var _ = (deps && deps.underscore) ? deps.underscore : global._;
   var transforms = [
     'transform'
     ,'webkitTransform'
@@ -91,4 +92,4 @@
     return 'actor-' + this.id;
   };
 
-}(this));
+};

@@ -1,4 +1,4 @@
-;(function (Rekapi, global) {
+var rekapiToCSS = function (Rekapi, global, deps) {
 
   // CONSTANTS
   //
@@ -10,6 +10,7 @@
     ,'w3': ''
     ,'webkit': '-webkit-'
   };
+  var _ = (deps && deps.underscore) ? deps.underscore : global._;
 
 
   // TEMPLATES
@@ -230,4 +231,4 @@
     return val.toFixed(precision) + unit;
   }
 
-} (this.Rekapi, this));
+};
