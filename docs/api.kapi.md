@@ -154,6 +154,8 @@ Kapi.prototype.pause ()
 
 Pause the animation.  A "paused" animation can be resumed from where it left off with `play()`.
 
+__[Example](examples/pause.html)__
+
 
 ### stop
 
@@ -167,6 +169,8 @@ Kapi.prototype.stop (alsoClear)
 
 Stop the animation.  A "stopped" animation will start from the beginning if `play()` is called upon it again.  If `alsoClear` is `true`, the contents of the canvas will be cleared.  It is `false` by default.
 
+__[Example](examples/stop.html)__
+
 
 ### isPlaying
 
@@ -178,6 +182,8 @@ Kapi.prototype.isPlaying ()
 ````
 
 Return whether or not the animation is playing (meaning not paused or stopped).
+
+__[Example](examples/is_playing.html)__
 
 
 ### animationLength
@@ -191,6 +197,8 @@ Kapi.prototype.animationLength ()
 
 Return the length of the animation, in milliseconds.
 
+__[Example](examples/animation_length.html)__
+
 
 ### lastPositionRendered
 
@@ -203,6 +211,8 @@ Kapi.prototype.lastPositionRendered ()
 
 Return the normalized (between 0 and 1) timeline position that was last rendered.
 
+__[Example](examples/last_position_rendered.html)__
+
 
 ### actorCount
 
@@ -214,6 +224,8 @@ Kapi.prototype.actorCount ()
 ````
 
 Return the number of `Actor`s in the animation.
+
+__[Example](examples/actor_count.html)__
 
 
 ### framerate
@@ -228,6 +240,8 @@ Kapi.prototype.framerate (opt_newFramerate)
 
 Get and optionally set the framerate of the animation.  There's generally no point in going above 60.
 
+__[Example](examples/framerate.html)__
+
 
 ### render
 
@@ -241,6 +255,8 @@ Kapi.prototype.render (millisecond)
 
 Calculate the positions for all `Actor`s at `millisecond`, and then draw them.  You can define any millisecond in the animation to render, so long as it is less than the length of the animation (see `animationLength`).
 
+__[Example](examples/render.html)__
+
 
 ### draw
 
@@ -253,6 +269,8 @@ Kapi.prototype.draw ()
 
 Draw all the `Actor`s at whatever position they are currently in.
 
+__[Example](examples/draw.html)__
+
 
 ### redraw
 
@@ -264,6 +282,8 @@ Kapi.prototype.redraw ()
 ````
 
 Re-`render()` the last frame that was `render()`ed.
+
+__[Example](examples/redraw.html)__
 
 
 ### calculateActorPositions
@@ -278,17 +298,7 @@ Kapi.prototype.calculateActorPositions (millisecond)
 
 Update the position of all the `Actor`s at `millisecond`, but do not draw them.
 
-
-### updateInternalState
-
-````javascript
-/**
- * @returns {Kapi}
- */
-Kapi.prototype.updateInternalState ()
-````
-
-Invalidate and re-compute the internal state of the `Kapi`.
+__[Example](examples/calculate_actor_positions.html)__
 
 
 ### exportTimeline
@@ -300,6 +310,8 @@ Invalidate and re-compute the internal state of the `Kapi`.
 Kapi.prototype.exportTimeline ()
 ````
 Export a reference-less dump of this Kapi's animation properties and Actors.
+
+__[Example](examples/export_timeline.html)__
 
 
 ### moveActorToLayer
@@ -314,6 +326,8 @@ Kapi.prototype.moveActorToLayer (actor, layer)
 ````
 
 Move an `Actor` around in the layer list.  Each layer has one `Actor`, and `Actor`s are drawn in order of their layer.  Lower layers (starting with 0) are drawn earlier.  If `layer` is higher than the number of layers (which can be found with `actorCount()`) or lower than 0, this method will return `undefined`.
+
+__[Example](examples/move_actor_to_layer.html)__
 
 
 ### bind
