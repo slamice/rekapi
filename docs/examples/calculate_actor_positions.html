@@ -11,13 +11,14 @@
     <script>
       var canvas = document.getElementsByTagName('canvas')[0];
 
-      var kapi = new Kapi(canvas, {
+      var kapi = new Kapi({
+        'context': canvas,
         'height': 300,
         'width': 400
       });
 
-      var actor = new Kapi.Actor({
-        'draw': function (canvas_context, state) {
+      var actor = new Kapi.CanvasActor({
+        'render': function (canvas_context, state) {
           canvas_context.beginPath();
             canvas_context.arc(
               state.x || 0,
@@ -39,7 +40,7 @@
         .keyframe(0,    { x: 50,  y: 50 })
         .keyframe(1000, { x: 200, y: 150 });
 
-      // This operation doesn't actually draw anything.  It just calls
+      // This operation doesn't actually render anything.  It just calls
       // calculatePosition on all of the actors.
       kapi.calculateActorPositions(500);
     </script>

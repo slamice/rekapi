@@ -1,13 +1,14 @@
-var rekapiActor = function (global, deps) {
+var rekapiActor = function (context, deps) {
 
   var DEFAULT_EASING = 'linear'
       ,gk
       ,actorCount
       ,ActorMethods
-      ,_ = (deps && deps.underscore) ? deps.underscore : global._
-      ,Tweenable = (deps && deps.Tweenable) ? deps.Tweenable : global.Tweenable;
+      ,_ = (deps && deps.underscore) ? deps.underscore : context._
+      ,Tweenable = (deps && deps.Tweenable) ?
+          deps.Tweenable : context.Tweenable;
 
-  gk = global.Kapi;
+  gk = context.Kapi;
   actorCount = 0;
 
 
@@ -23,13 +24,10 @@ var rekapiActor = function (global, deps) {
    */
   //TODO:  Oh noes, this is a linear search!  Maybe optimize it?
   function getPropertyCacheIdForMillisecond (actor, millisecond) {
-    var i, len
-        ,list;
+    var list = actor._timelinePropertyCacheIndex;
+    var len = list.length;
 
-    list = actor._timelinePropertyCacheIndex;
-    len = list.length;
-
-    for (i = 1; i < len; i++) {
+    for (var i = 1; i < len; i++) {
       if (list[i] >= millisecond) {
         return (i - 1);
       }
@@ -59,23 +57,45 @@ var rekapiActor = function (global, deps) {
    */
   function cachePropertiesToSegments (actor) {
     _.each(actor._timelinePropertyCaches, function (propertyCache, cacheId) {
-      var latestProperties = {};
-
-      _.each(actor._propertyTracks, function (propertyTrack, propertyName) {
-        var previousKeyframeProperty = null;
-
-        _.find(propertyTrack, function (keyframeProperty) {
-          if (keyframeProperty.millisecond > cacheId) {
-            latestProperties[propertyName] = previousKeyframeProperty;
-          }
-
-          previousKeyframeProperty = keyframeProperty;
-          return !!latestProperties[propertyName];
-        });
-      });
-
+      var latestProperties = getLatestPropeties(actor, +cacheId);
       _.defaults(propertyCache, latestProperties);
     });
+  }
+
+
+  /**
+   * Gets all of the current and most recent Kapi.KeyframeProperty's for a
+   * given millisecond.
+   * @param {Kapi.Actor} actor
+   * @param {number} forMillisecond
+   */
+  function getLatestPropeties (actor, forMillisecond) {
+    var latestProperties = {};
+
+    _.each(actor._propertyTracks, function (propertyTrack, propertyName) {
+      var previousKeyframeProperty = null;
+
+      _.find(propertyTrack, function (keyframeProperty) {
+        if (keyframeProperty.millisecond > forMillisecond) {
+          latestProperties[propertyName] = previousKeyframeProperty;
+        } else if (keyframeProperty.millisecond === forMillisecond) {
+          latestProperties[propertyName] = keyframeProperty;
+        }
+
+        previousKeyframeProperty = keyframeProperty;
+        return !!latestProperties[propertyName];
+      });
+
+      if (!latestProperties[propertyName]) {
+        var lastProp = _.last(propertyTrack);
+
+        if (lastProp && lastProp.millisecond <= forMillisecond) {
+          latestProperties[propertyName] = lastProp;
+        }
+      }
+    });
+
+    return latestProperties;
   }
 
 
@@ -111,48 +131,6 @@ var rekapiActor = function (global, deps) {
 
 
   /**
-   * For a given millisecond, determine all of the latest keyframe properties
-   * for each property track and decorate `providedPositions` and
-   * `providedEasings` with their value and easing.
-   *
-   * @param {Kapi.Actor} actor
-   * @param {Object} providedPositions
-   * @param {Object} providedEasings
-   * @param {number} forMillisecond
-   */
-  function fillInMissingProperties (actor, providedPositions, providedEasings,
-      forMillisecond) {
-    var trackedPropertyNames = _.keys(actor._propertyTracks);
-    var providedPropertyNames = _.keys(providedPositions);
-    var missingProperties = _.difference(trackedPropertyNames,
-        providedPropertyNames);
-    var latestPropertiesForMillisecond = {};
-
-    _.each(missingProperties, function (propertyName) {
-      var reversedProperties;
-
-      reversedProperties = actor._propertyTracks[propertyName]
-          .slice(0).reverse();
-
-      _.each(reversedProperties, function (keyframeProperty) {
-        if (keyframeProperty.millisecond < forMillisecond
-            && !latestPropertiesForMillisecond[propertyName]) {
-          latestPropertiesForMillisecond[propertyName] = {
-            'value': keyframeProperty.value
-            ,'easing': keyframeProperty.easing
-          };
-        }
-      });
-    });
-
-    _.each(latestPropertiesForMillisecond, function (property, propertyName) {
-      providedPositions[propertyName] = property.value;
-      providedEasings[propertyName] = property.easing;
-    });
-  }
-
-
-  /**
    * @param {Object} opt_config
    * @constructor
    */
@@ -169,13 +147,16 @@ var rekapiActor = function (global, deps) {
       ,'_timelinePropertyCaches': {}
       ,'_timelinePropertyCacheIndex': []
       ,'_keyframeProperties': {}
-      ,'_isShowing': false
       ,'_isPersisting': false
       ,'id': getUniqueActorId()
       ,'setup': opt_config.setup || gk.util.noop
-      ,'draw': opt_config.draw || gk.util.noop
+      ,'render': opt_config.render || gk.util.noop
       ,'teardown': opt_config.teardown || gk.util.noop
     });
+
+    if (opt_config.context) {
+      this.context(opt_context);
+    }
 
     return this;
   };
@@ -192,6 +173,19 @@ var rekapiActor = function (global, deps) {
 
 
   /**
+   * @param {Object} opt_context
+   * @return {Object}
+   */
+  gk.Actor.prototype.context = function (opt_context) {
+    if (opt_context) {
+      this._context = opt_context;
+    }
+
+    return this._context;
+  };
+
+
+  /**
    * @param {number} when
    * @param {Object} position
    * @param {string|Object} easing
@@ -201,10 +195,10 @@ var rekapiActor = function (global, deps) {
       opt_easing) {
     var originalEasingString;
 
-    // This code will be used.  Other work needs to be done beforehand, though.
-    if (!opt_easing) {
-      opt_easing = DEFAULT_EASING;
-    }
+    // TODO:  The opt_easing logic seems way overcomplicated, it's probably out
+    // of date.  Multiple eases landed first in Rekapi, then were pushed
+    // upstream into Shifty.  There's likely some redundant logic here.
+    opt_easing = opt_easing || DEFAULT_EASING;
 
     if (typeof opt_easing === 'string') {
       originalEasingString = opt_easing;
@@ -219,8 +213,6 @@ var rekapiActor = function (global, deps) {
     _.each(position, function (positionVal, positionName) {
       opt_easing[positionName] = opt_easing[positionName] || DEFAULT_EASING;
     });
-
-    fillInMissingProperties(this, position, opt_easing, when);
 
     _.each(position, function (value, name) {
       var newKeyframeProperty;
@@ -337,7 +329,19 @@ var rekapiActor = function (global, deps) {
       return this;
     }
 
-    this.copyProperties(until, length);
+    var end = this.getEnd();
+    var latestProps = getLatestPropeties(this, this.getEnd());
+    var serializedProps = {};
+    var serializedEasings = {};
+
+    _.each(latestProps, function (latestProp, propName) {
+      serializedProps[propName] = latestProp.value;
+      serializedEasings[propName] = latestProp.easing;
+    });
+
+    this.removeKeyframe(end);
+    this.keyframe(end, serializedProps, serializedEasings);
+    this.keyframe(until, serializedProps, serializedEasings);
 
     return this;
   };
@@ -425,18 +429,21 @@ var rekapiActor = function (global, deps) {
   gk.Actor.prototype.removeKeyframe = function (when) {
     _.each(this._propertyTracks, function (propertyTrack, propertyName) {
       var i = -1;
+      var foundProperty = false;
 
       _.find(propertyTrack, function (keyframeProperty) {
         i++;
-        return when === keyframeProperty.millisecond;
+        foundProperty = (when === keyframeProperty.millisecond);
+        return foundProperty;
       });
 
-      var removedProperty = propertyTrack.splice(i, 1)[0];
+      if (foundProperty) {
+        var removedProperty = propertyTrack.splice(i, 1)[0];
 
-      if (removedProperty) {
-        delete this._keyframeProperties[removedProperty.id];
+        if (removedProperty) {
+          delete this._keyframeProperties[removedProperty.id];
+        }
       }
-
     }, this);
     this.kapi._recalculateAnimationLength();
     this.invalidatePropertyCache();
@@ -468,68 +475,25 @@ var rekapiActor = function (global, deps) {
 
 
   /**
-   * @param {boolean} alsoPersist
-   * @return {Kapi.Actor}
-   */
-  gk.Actor.prototype.show = function (alsoPersist) {
-    this._isShowing = true;
-    this._isPersisting = !!alsoPersist;
-
-    return this;
-  };
-
-
-  /**
-   * @param {boolean} alsoUnpersist
-   * @return {Kapi.Actor}
-   */
-  gk.Actor.prototype.hide = function (alsoUnpersist) {
-    this._isShowing = false;
-
-    if (alsoUnpersist === true) {
-      this._isPersisting = false;
-    }
-
-    return this;
-  };
-
-
-  /**
-   * @return {boolean}
-   */
-  gk.Actor.prototype.isShowing = function () {
-    return this._isShowing || this._isPersisting;
-  };
-
-
-  /**
    * @param {number} millisecond
    * @return {Kapi.Actor}
    */
   gk.Actor.prototype.calculatePosition = function (millisecond) {
-    //TODO: This function is too long!  It needs to be broken out somehow.
-    var delta
-        ,startMs
-        ,endMs
-        ,latestCacheId
-        ,propertiesToInterpolate
-        ,interpolatedObject;
-
-    startMs = this.getStart();
-    endMs = this.getEnd();
-    this.hide();
+    var startMs = this.getStart();
+    var endMs = this.getEnd();
 
     if (startMs <= millisecond && millisecond <= endMs) {
-      this.show();
-      latestCacheId = getPropertyCacheIdForMillisecond(this, millisecond);
-      propertiesToInterpolate =
+      var latestCacheId = getPropertyCacheIdForMillisecond(this, millisecond);
+      var propertiesToInterpolate =
           this._timelinePropertyCaches[this._timelinePropertyCacheIndex[
           latestCacheId]];
-      interpolatedObject = {};
+      var interpolatedObject = {};
 
       _.each(propertiesToInterpolate, function (keyframeProperty, propName) {
-        interpolatedObject[propName] =
-            keyframeProperty.getValueAt(millisecond);
+        if (keyframeProperty) {
+          interpolatedObject[propName] =
+              keyframeProperty.getValueAt(millisecond);
+        }
       });
 
       this.set(interpolatedObject);
@@ -599,21 +563,5 @@ var rekapiActor = function (global, deps) {
     cachePropertiesToSegments(this);
     linkTrackedProperties(this);
   };
-
-
-  /**
-   * Start Shifty interoperability methods...
-   ******/
-
-  _.each(['tween', 'to'], function (shiftyMethodName) {
-    gk.Actor.prototype[shiftyMethodName] = function () {
-      this.show(true);
-      Tweenable.prototype[shiftyMethodName].apply(this, arguments);
-    }
-  }, this);
-
-  /******
-   * ...End Shifty interoperability methods.
-   */
 
 };

@@ -1,4 +1,4 @@
-var rekapiCore = function (global, deps) {
+var rekapiCore = function (context, deps, global) {
 
   /**
    * Sorts an array numerically, from smallest to largest.
@@ -116,12 +116,19 @@ var rekapiCore = function (global, deps) {
    * @param {Kapi} kapi
    */
   function tick (kapi) {
-    kapi._loopId = setTimeout(function () {
-      // First, schedule the next update.  renderCurrentMillisecond can cancel
-      // the update if necessary.
+    var updateFn = function () {
       tick(kapi);
       renderCurrentMillisecond(kapi);
-    }, 1000 / kapi.config.fps);
+    };
+
+    // Need to check for .call presence to get around an IE limitation.
+    // See annotation for cancelLoop for more info.
+    if (kapi._scheduleUpdate.call) {
+      kapi._loopId = kapi._scheduleUpdate.call(global,
+          updateFn, 1000 / kapi.config.fps);
+    } else {
+      kapi._loopId = setTimeout(updateFn, 1000 / kapi.config.fps);
+    }
   }
 
 
@@ -138,21 +145,106 @@ var rekapiCore = function (global, deps) {
 
 
   /**
+   * @param {number}
+   * @return {Function}
+   */
+  function getUpdateMethod (framerate) {
+    if (framerate !== 60) {
+      return global.setTimeout;
+    } else {
+      // requestAnimationFrame() shim by Paul Irish (modified for Rekapi)
+      // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+      return  global.requestAnimationFrame ||
+        global.webkitRequestAnimationFrame ||
+        global.oRequestAnimationFrame      ||
+        global.msRequestAnimationFrame     ||
+        (global.mozCancelRequestAnimationFrame
+          && global.mozRequestAnimationFrame) ||
+        global.setTimeout;
+    }
+  }
+
+
+  /**
+   * @param {number}
+   * @return {Function}
+   */
+  function getCancelMethod (framerate) {
+    if (framerate !== 60) {
+      return global.clearTimeout;
+    } else {
+      return  global.cancelAnimationFrame ||
+        global.webkitCancelAnimationFrame ||
+        global.oCancelAnimationFrame      ||
+        global.msCancelAnimationFrame     ||
+        global.mozCancelRequestAnimationFrame ||
+        global.clearTimeout;
+    }
+  }
+
+
+  /**
+   * Draw all the `Actor`s at whatever position they are currently in.
+   * @param {Kapi}
+   * @return {Kapi}
+   */
+  function draw (kapi) {
+    var i, len
+        ,currentActor
+        ,canvas_context
+        ,orderedActors
+        ,drawOrder;
+
+    fireEvent(kapi, 'onBeforeDraw');
+    len = kapi._drawOrder.length;
+
+    if (kapi._drawOrderSorter) {
+      orderedActors = drawOrder =
+          _.sortBy(kapi._actors, kapi._drawOrderSorter);
+      drawOrder = _.pluck(orderedActors, 'id');
+    } else {
+      drawOrder = kapi._drawOrder;
+    }
+
+    for (i = 0; i < len; i++) {
+      currentActor = kapi._actors[drawOrder[i]];
+      canvas_context = currentActor.context();
+      currentActor.render(canvas_context, currentActor.get());
+    }
+
+    return kapi;
+  };
+
+
+  /**
+   * Cancels an update loop.  This abstraction is needed to get around the fact
+   * that in IE, clearTimeout is not technically a function
+   * (https://twitter.com/kitcambridge/status/206655060342603777) and thus
+   * Function.prototype.call cannot be used upon it.
+   * @param {Kapi} kapi
+   */
+  function cancelLoop (kapi) {
+    if (kapi._cancelUpdate.call) {
+      kapi._cancelUpdate.call(global, kapi._loopId);
+    } else {
+      clearTimeout(kapi._loopId);
+    }
+  }
+
+
+  /**
    * Does nothing.  Absolutely nothing at all.
    */
   function noop () {
     // NOOP!
   }
 
-  var _ = (deps && deps.underscore) ? deps.underscore : global._
-      ,Tweenable = (deps && deps.Tweenable) ? deps.Tweenable : global.Tweenable;
-
+  var _ = (deps && deps.underscore) ? deps.underscore : context._;
+  var Tweenable = (deps && deps.Tweenable) ? deps.Tweenable : context.Tweenable;
+  var now = Tweenable.util.now;
 
   var defaultConfig = {
-    'fps': 30
-    ,'height': 150
-    ,'width': 300
-    ,'doRoundNumbers': false
+    'fps': 60
     ,'clearOnUpdate': true
   };
 
@@ -162,18 +254,15 @@ var rekapiCore = function (global, deps) {
     ,'PLAYING': 'playing'
   };
 
-  var now = Tweenable.util.now;
 
   /**
-   * @param {HTMLCanvas} canvas
+   * @param {Object} context
    * @param {Object} opt_config
    * @constructor
    */
-  var gk = global.Kapi || function Kapi (canvas, opt_config) {
-    this.canvas = canvas;
-    this._contextType = null;
-    this.canvas_setContext(canvas);
-    this.config = {};
+  var gk = context.Kapi || function Kapi (opt_config) {
+    this.config = opt_config || {};
+    this.context = this.config.context;
     this._actors = {};
     this._drawOrder = [];
     this._playState = playState.STOPPED;
@@ -186,6 +275,7 @@ var rekapiCore = function (global, deps) {
       ,'onPlay': []
       ,'onPause': []
       ,'onStop': []
+      ,'onBeforeDraw': []
     };
 
     // How many times to loop the animation before stopping.
@@ -209,17 +299,22 @@ var rekapiCore = function (global, deps) {
     _.extend(this.config, opt_config);
     _.defaults(this.config, defaultConfig);
 
-    // Apply the height and width if they were passed in the`config` Object.
-    // Also delete them from the internal config - we won't need them anymore.
-    _.each(['height', 'width'], function (dimension) {
-      if (this.config[dimension]) {
-        this['canvas_' + dimension](this.config[dimension]);
-        delete this.config[dimension];
-      }
-    }, this);
+    this._scheduleUpdate = getUpdateMethod(this.config.fps);
+    this._cancelUpdate = getCancelMethod(this.config.fps);
+
+    _.each(this._contextInitHook, function (fn) {
+      fn.call(this);
+    }, this)
 
     return this;
   };
+
+
+  /**
+   * @type {{function}} Contains the context init function to be called in the
+   * Kapi contstructor.
+   */
+  gk.prototype._contextInitHook = {};
 
 
   /**
@@ -247,6 +342,10 @@ var rekapiCore = function (global, deps) {
   gk.prototype.addActor = function (actor) {
     // You can't add an actor more than once.
     if (!_.contains(this._actors, actor)) {
+      if (!actor.context()) {
+        actor.context(this.context);
+      }
+
       actor.kapi = this;
       actor.fps = this.framerate();
       this._actors[actor.id] = actor;
@@ -303,7 +402,7 @@ var rekapiCore = function (global, deps) {
    * @return {Kapi}
    */
   gk.prototype.play = function (opt_howManyTimes) {
-    clearTimeout(this._loopId);
+    cancelLoop(this);
 
     if (this._playState === playState.PAUSED) {
       this._loopTimestamp += now() - this._pausedAtTime;
@@ -315,7 +414,7 @@ var rekapiCore = function (global, deps) {
     this._playState = playState.PLAYING;
     tick(this);
 
-    // also resume any shifty tweens that are paused.
+    // also resume any Shifty tweens that are paused.
     _.each(this._actors, function (actor) {
       if (actor._state.isPaused ) {
         actor.resume();
@@ -360,7 +459,7 @@ var rekapiCore = function (global, deps) {
     }
 
     this._playState = playState.PAUSED;
-    clearTimeout(this._loopId);
+    cancelLoop(this);
     this._pausedAtTime = now();
 
     // also pause any shifty tweens that are running.
@@ -378,24 +477,15 @@ var rekapiCore = function (global, deps) {
 
 
   /**
-   * @param {boolean} alsoClear
    * @return {Kapi}
    */
-  gk.prototype.stop = function (alsoClear) {
+  gk.prototype.stop = function () {
     this._playState = playState.STOPPED;
-    clearTimeout(this._loopId);
+    cancelLoop(this);
 
-    if (alsoClear === true) {
-      this.canvas_clear();
-    }
-
-    // also kill any shifty tweens that are running.
+    // Also kill any shifty tweens that are running.
     _.each(this._actors, function (actor) {
       actor.stop();
-
-      if (alsoClear === true) {
-        actor.hide();
-      }
     });
 
     fireEvent(this, 'onPlayStateChange');
@@ -444,6 +534,8 @@ var rekapiCore = function (global, deps) {
   gk.prototype.framerate = function (opt_newFramerate) {
     if (opt_newFramerate) {
       this.config.fps = opt_newFramerate;
+      this._scheduleUpdate = getUpdateMethod(this.config.fps);
+      this._cancelUpdate = getCancelMethod(this.config.fps);
     }
 
     return this.config.fps;
@@ -456,7 +548,7 @@ var rekapiCore = function (global, deps) {
    */
   gk.prototype.render = function (millisecond) {
     this.calculateActorPositions(millisecond);
-    this.draw();
+    draw(this);
     this._lastRenderedMillisecond = millisecond;
     fireEvent(this, 'onFrameRender');
 
@@ -479,62 +571,10 @@ var rekapiCore = function (global, deps) {
    * @return {Kapi}
    */
   gk.prototype.calculateActorPositions = function (millisecond) {
-    var i, len, initialRoundSetting;
+    var len = this._drawOrder.length;
 
-    initialRoundSetting = Tweenable.util.isRoundingEnabled();
-
-    if (this.config.doRoundNumbers) {
-      Tweenable.util.enableRounding();
-    } else {
-      Tweenable.util.disableRounding();
-    }
-
-    len = this._drawOrder.length;
-
-    for (i = 0; i < len; i++) {
+    for (var i = 0; i < len; i++) {
       this._actors[this._drawOrder[i]].calculatePosition(millisecond);
-    }
-
-    if (initialRoundSetting === true) {
-      Tweenable.util.enableRounding();
-    } else {
-      Tweenable.util.disableRounding();
-    }
-
-    return this;
-  };
-
-
-  /**
-   * @return {Kapi}
-   */
-  gk.prototype.draw = function () {
-    var i, len
-        ,currentActor
-        ,canvas_context
-        ,orderedActors
-        ,drawOrder;
-
-    if (this.config.clearOnUpdate) {
-      this.canvas_clear();
-    }
-
-    len = this._drawOrder.length;
-    canvas_context = this.canvas_getContext();
-
-    if (this._drawOrderSorter) {
-      orderedActors = drawOrder =
-          _.sortBy(this._actors, this._drawOrderSorter);
-      drawOrder = _.pluck(orderedActors, 'id');
-    } else {
-      drawOrder = this._drawOrder;
-    }
-
-    for (i = 0; i < len; i++) {
-      currentActor = this._actors[drawOrder[i]];
-      if (currentActor.isShowing()) {
-        currentActor.draw(canvas_context, currentActor.get());
-      }
     }
 
     return this;
@@ -554,7 +594,7 @@ var rekapiCore = function (global, deps) {
       return actor;
     }
 
-    return undefined;
+    return;
   };
 
 
@@ -657,6 +697,6 @@ var rekapiCore = function (global, deps) {
     }
   }
 
-  global.Kapi = gk;
+  context.Kapi = gk;
 
 };

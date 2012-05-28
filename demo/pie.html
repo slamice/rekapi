@@ -1,21 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="../dist/rekapi.bundle.min.js"></script>
+  <script src="../lib/shifty/tests/utils/require.js"></script>
 </head>
 <body>
-  <canvas></canvas>
+  <canvas style="background: #eee;"></canvas>
   <script>
-  (function (global) {
+  require.config({
+    paths: {
+      shifty: "../dist/shifty",
+      underscore: "../dist/underscore",
+      rekapi: "../dist/rekapi"
+    }
+  });
+  require(['rekapi', 'underscore'], function(Kapi, _) {
 
 
     var canvas = document.getElementsByTagName('canvas')[0]
-        ,kapi = new Kapi(canvas, {
-          'fps': 30
-          ,'height': 300
-          ,'width': 300
+        ,kapi = new Kapi({
+          'context': canvas
         });
-        kapi.canvas_style('background', '#eee');
 
     var CANVAS_HEIGHT = 300
         ,CANVAS_WIDTH = 300
@@ -28,6 +32,8 @@
         }
         ,actors = {}
 
+    kapi.canvasHeight(CANVAS_HEIGHT);
+    kapi.canvasWidth(CANVAS_WIDTH);
 
     function percentToRad (percent) {
       return degToRad(3.6 * percent);
@@ -53,8 +59,8 @@
 
 
     function getActor (basePercentage, color, previousPiece) {
-      var actor = new Kapi.Actor({
-        'draw': function (canvas_context, state) {
+      var actor = new Kapi.CanvasActor({
+        'render': function (canvas_context, state) {
           var percent = basePercentage
               ,previousSum = getStartRad(this)
               ,x ,y
@@ -133,7 +139,8 @@
       })
       .wait(delay += 75)
       .keyframe(1800, {
-        'spread': 0
+        'scale': 1
+        ,'spread': 0
         ,'opacity': 1
       }, {
         'spread': 'bouncePast'
@@ -141,12 +148,14 @@
       })
       .wait(2500 + delay)
       .keyframe(3000 + delay * 2, {
-        'spread': 16
+        'scale': 1
+        ,'spread': 16
       }, {
         'spread': 'easeFromTo'
       })
       .keyframe(3900 + delay * 2, {
-        'spread': 0
+        'scale': 1
+        ,'spread': 0
       }, {
         'spread': 'easeFromTo'
       })
@@ -165,7 +174,7 @@
 
     kapi.play();
 
-  } (this));
+  });
   </script>
 </body>
 </html>

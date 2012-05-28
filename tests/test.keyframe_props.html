@@ -2,52 +2,29 @@
 <html>
 <head>
   <link href="../lib/shifty/tests/qunit/qunit.css" rel="stylesheet" type="text/css" />
+  <script>
+  var KAPI_DEBUG = true
+      ,internalDebugNow = function () {
+        return +(new Date());
+      }
+      ,SHIFTY_DEBUG_NOW = function () {
+        return internalDebugNow();
+      };
+  </script>
   <script src="../lib/shifty/tests/qunit/qunit.js"></script>
   <script src="../lib/underscore/underscore.js"></script>
   <script src="../lib/shifty/dist/shifty.js"></script>
   <script src="../src/rekapi.core.js"></script>
   <script src="../src/rekapi.actor.js"></script>
   <script src="../src/rekapi.keyframeprops.js"></script>
-  <script src="../src/rekapi.canvas.js"></script>
-  <script src="../ext/dom/rekapi.dom.js"></script>
   <script src="../src/rekapi.init.js"></script>
   <script>
   function setupTestKapi () {
-    var sandbox
-        ,kapi
-        ,actor;
-
-    sandbox = document.getElementById('sandbox');
-    kapi = new Kapi(sandbox);
-
-    kapi.canvas_style('background', '#ddd');
-    kapi.canvas_height(300);
-    kapi.canvas_width(500);
-
-    return kapi;
+    return new Kapi();
   }
 
   function  setupTestActor (forKapi) {
-    var actor;
-
-    actor = new Kapi.Actor({
-      'draw': function (canvas_context, state) {
-        canvas_context.beginPath();
-          canvas_context.arc(
-            this.x || 0,
-            this.y || 0,
-            this.radius || 0,
-            0,
-            Math.PI*2,
-            true);
-          canvas_context.fillStyle = this.color || '#f0f';
-          canvas_context.fill();
-          canvas_context.closePath();
-
-          return this;
-      }
-    });
-
+    var actor = new Kapi.Actor();
     forKapi.addActor(actor);
     return actor;
   }
@@ -201,8 +178,9 @@
           'There is a "y" KeyframeProperty at 1000');
       equals(testActor._timelinePropertyCaches[1500].x.millisecond, 1500,
           'There is an "x" KeyframeProperty at 1500');
-      equals(testActor._timelinePropertyCaches[1500].y, undefined,
-          'There is no "y" KeyframeProperty at 1500');
+      equals(testActor._timelinePropertyCaches[1500].y,
+          testActor._propertyTracks.y[1],
+          'The second tracked "y" property is cached at the 1500 millisecond cache');
       equals(testActor._propertyTracks.x[0].nextProperty,
           testActor._propertyTracks.x[1],
           'The first tracked "x" KeyframeProperty instance\'s nextProperty did not change');
@@ -247,6 +225,5 @@
    <h2 id="qunit-userAgent"></h2>
    <ol id="qunit-tests"></ol>
    <div id="qunit-fixture"></div>
-  <canvas id="sandbox"></canvas>
 </body>
 </html>

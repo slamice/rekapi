@@ -40,7 +40,17 @@
         .keyframe(0,    { x: 50,  y: 50 })
         .keyframe(1000, { x: 200, y: 150 });
 
-      console.log(kapi.exportTimeline());
+      kapi.bind('onPlay', function (kapi) {
+        console.log(kapi, 'is now playing');
+      });
+      kapi.bind('onFrameRender', function (kapi) {
+        console.log(kapi, 'just rendered a frame');
+      });
+      kapi.bind('onStop', function (kapi) {
+        console.log(kapi, 'has stopped');
+      });
+
+      kapi.play(1);
     </script>
   </body>
 </html>

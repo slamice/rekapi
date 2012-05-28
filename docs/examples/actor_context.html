@@ -11,13 +11,14 @@
     <script>
       var canvas = document.getElementsByTagName('canvas')[0];
 
-      var kapi = new Kapi(canvas, {
+      var kapi = new Kapi({
+        'context': canvas,
         'height': 300,
         'width': 400
       });
 
-      var actor = new Kapi.Actor({
-        'draw': function (canvas_context, state) {
+      var actor = new Kapi.CanvasActor({
+        'render': function (canvas_context, state) {
           canvas_context.beginPath();
             canvas_context.arc(
               state.x || 0,
@@ -34,15 +35,14 @@
         }
       });
 
-      kapi.addActor(actor);
-      actor
-        .keyframe(0,    { x: 50,  y: 50 })
-        .keyframe(1000, { x: 200, y: 150 });
+      // A context wasn't specified this logs undefined.
+      console.log(actor.context());
 
-      // This is almost the same as calling kapi.render(500).  No events are
-      // fired with this approach, however.
-      kapi.calculateActorPositions(500);
-      kapi.draw();
+      kapi.addActor(actor);
+
+      // Actually logs out kapi's context.  No context was specified for the
+      // actor when it was initialized, so it defaulted to kapi's context.
+      console.log(actor.context());
     </script>
   </body>
 </html>
