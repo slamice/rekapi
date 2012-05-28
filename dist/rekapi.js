@@ -1856,7 +1856,9 @@ if (typeof define === 'function' && define.amd) {
       // Prevent Underscore from polluting the global scope.
       // This global can be safely removed since Rekapi keeps its own reference
       // to Underscore via the `deps` object passed earlier as an argument.
-      delete global._;
+      try {
+        delete global._;
+      } catch (e) {}
     }
 
     return Kapi;
