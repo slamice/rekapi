@@ -1,5 +1,5 @@
 /**
- * Rekapi - Rewritten Kapi. v0.8.9
+ * Rekapi - Rewritten Kapi. v0.8.10
  *   By Jeremy Kahn - jeremyckahn@gmail.com
  *   https://github.com/jeremyckahn/rekapi
  *
@@ -1856,7 +1856,7 @@ if (typeof define === 'function' && define.amd) {
       // Prevent Underscore from polluting the global scope.
       // This global can be safely removed since Rekapi keeps its own reference
       // to Underscore via the `deps` object passed earlier as an argument.
-      global._ = undefined;
+      delete global._;
     }
 
     return Kapi;
