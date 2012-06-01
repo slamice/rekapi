@@ -1,5 +1,5 @@
 var rekapiDOM = function (context, deps) {
-  var gk = context.Kapi;
+  var Kapi = context.Kapi;
   var _ = (deps && deps.underscore) ? deps.underscore : context._;
   var transforms = [
     'transform'
@@ -18,28 +18,29 @@ var rekapiDOM = function (context, deps) {
    * @param {HTMLElement} element
    * @constructor
    */
-  gk.DOMActor = function (element) {
-    gk.Actor.call(this);
+  Kapi.DOMActor = function (element) {
+    Kapi.Actor.call(this);
     this._context = element;
     var className = this.getCSSName();
 
     // Add the class if it's not already there.
     // Using className instead of classList to make IE happy.
     if (!this._context.className.match(className)) {
-      this._context.className += className;
+      this._context.className += ' ' + className;
     }
 
     // Remove the instance's render method to allow the
     // ActorMethods.prototype.render method to be accessible.
     delete this.render;
+    delete this.teardown;
 
     return this;
   };
 
 
   function DOMActorMethods () {}
-  DOMActorMethods.prototype = gk.Actor.prototype;
-  gk.DOMActor.prototype = new DOMActorMethods();
+  DOMActorMethods.prototype = Kapi.Actor.prototype;
+  Kapi.DOMActor.prototype = new DOMActorMethods();
 
 
   /**
@@ -57,6 +58,13 @@ var rekapiDOM = function (context, deps) {
         setStyle(context, styleName, styleValue);
       }
     }, this);
+  };
+
+
+  DOMActorMethods.prototype.teardown = function (context, state) {
+    var classList = this._context.className.match(/\S+/g);
+    var sanitizedClassList = _.without(classList, this.getCSSName());
+    this._context.className = sanitizedClassList;
   };
 
 

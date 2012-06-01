@@ -1,17 +1,19 @@
-var rekapiToCSS = function (Rekapi, context, deps) {
+var rekapiToCSS = function (context, deps) {
+
+  var Kapi = context.Kapi;
+  var _ = (deps && deps.underscore) ? deps.underscore : context._;
 
   // CONSTANTS
   //
   var DEFAULT_GRANULARITY = 100;
   var TRANSFORM_TOKEN = 'TRANSFORM';
-  var VENDOR_PREFIXES = Rekapi.util.VENDOR_PREFIXES = {
+  var VENDOR_PREFIXES = Kapi.util.VENDOR_PREFIXES = {
     'microsoft': '-ms-'
     ,'mozilla': '-moz-'
     ,'opera': '-o-'
     ,'w3': ''
     ,'webkit': '-webkit-'
   };
-  var _ = (deps && deps.underscore) ? deps.underscore : context._;
 
 
   // TEMPLATES
@@ -82,12 +84,12 @@ var rekapiToCSS = function (Rekapi, context, deps) {
    * @param {string} str
    */
   function isColorString (str) {
-    return /rgb/.test(str);
+    return (/rgb/).test(str);
   }
 
 
   /**
-   * @param {Rekapi.Actor} actor
+   * @param {Kapi.Actor} actor
    */
   function serializeActorStep (actor) {
     var serializedProps = ['{'];
@@ -105,11 +107,11 @@ var rekapiToCSS = function (Rekapi, context, deps) {
 
     serializedProps.push('}');
     return serializedProps.join('');
-  };
+  }
 
 
   /**
-   * @param {Rekapi.Actor} actor
+   * @param {Kapi.Actor} actor
    * @param {number} granularity
    * @return {string}
    */
@@ -127,10 +129,11 @@ var rekapiToCSS = function (Rekapi, context, deps) {
     actor.calculatePosition(delay);
     serializedFrames.push('  from ' + serializeActorStep(actor));
 
-    for (var i = loopStart; i <= loopEnd; i += increment) {
+    var i;
+    for (i = loopStart; i <= loopEnd; i += increment) {
       actor.calculatePosition(i);
       percent = (i - delay) / animPercent;
-      adjustedPercent = +percent.toFixed(2)
+      adjustedPercent = +percent.toFixed(2);
       stepPrefix = adjustedPercent + '% ';
       serializedFrames.push('  ' + stepPrefix + serializeActorStep(actor));
     }
@@ -146,7 +149,7 @@ var rekapiToCSS = function (Rekapi, context, deps) {
    * @param {string} toKeyframes Generated keyframes to wrap in boilerplates
    * @param {string} animName
    * @param {[string]} opt_vendors Vendor boilerplates to be applied.  Should be
-   *     any of the values in Rekapi.util.VENDOR_PREFIXES.
+   *     any of the values in Kapi.util.VENDOR_PREFIXES.
    * @return {string}
    */
   function applyVendorBoilerplates (toKeyframes, animName, opt_vendors) {
@@ -181,7 +184,7 @@ var rekapiToCSS = function (Rekapi, context, deps) {
 
 
   /**
-   * @param {Rekapi.Actor} actor
+   * @param {Kapi.Actor} actor
    * @param {[string]} opt_vendors
    */
   function generateCSSClass (actor, opt_vendors) {
@@ -202,7 +205,7 @@ var rekapiToCSS = function (Rekapi, context, deps) {
 
 
   /**
-   * @param {Rekapi.Actor} actor
+   * @param {Kapi.Actor} actor
    * @param {string} vendor
    */
   function generateCSSVendorAttributes (actor, vendor) {
@@ -211,7 +214,7 @@ var rekapiToCSS = function (Rekapi, context, deps) {
     var start = actor.getStart();
     var duration = actor.getEnd() - start;
 
-    var duration = printf('  %sanimation-duration: %sms;'
+    duration = printf('  %sanimation-duration: %sms;'
         ,[prefix, duration]);
     generatedAttributes.push(duration);
 
@@ -234,7 +237,7 @@ var rekapiToCSS = function (Rekapi, context, deps) {
    * @param {[string]} args
    * @return {string}
    */
-  var printf = Rekapi.util.printf = function (formatter, args) {
+  var printf = Kapi.util.printf = function (formatter, args) {
     var composedStr = formatter;
     _.each(args, function (arg) {
       composedStr = composedStr.replace('%s', arg);

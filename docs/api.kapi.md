@@ -4,21 +4,18 @@
 
 ````javascript
 /**
- * @param {HTMLCanvas|HTMLElement|Object} canvas
  * @param {Object=} opt_config
+ *   @param {number=} fps
+ *   @param {Object=} context
  * @constructor
  */
-Kapi (canvas, opt_config)
+Kapi (opt_config)
 ````
 
-Create a `Kapi` instance.  `canvas` is (typically) an HTML 5 `<canvas>` from the DOM.  This `<canvas>` is where the animation is drawn.  `canvas` can also be an `HTMLElement`, please see [dom.md](dom.md) for documentation of DOM animations.
+Create a `Kapi` instance.  Valid  properties of `opt_config`:
 
-Functional properties of `opt_config`:
-
-* __fps__: Number.  The frames per second at which the animation updates.  The default value is 30.
-* __height__: Number.  The height to set upon `canvas`.
-* __width__: Number.  The width to set upon `canvas`.
-* __clearOnUpdate__: Boolean.  Whether or not clear out the canvas before each new frame is drawn.  `true` by default.
+* __fps__: The frames per second at which the animation updates.  The default value is 30.
+* __context__: The context that the animation will run in.  Can be any type of `Object`; gets used by the renderer and inherited by the `Kapi.Actor`s as they are added to the animation.  This isn't always needed, it usually just applies to `<canvas>` animations.  See the documenation on the [`<canvas>` extension](https://github.com/jeremyckahn/rekapi/tree/master/ext/canvas) for more info.
 
 __[Example](examples/kapi.html)__
 
@@ -253,13 +250,13 @@ Kapi.prototype.bind (eventName, handler)
 
 Bind an handler function to a Kapi event.  Possible events include:
 
-* __onBeforeDraw__: Fires each frame before Actors are rendered.
-* __onFrameRender__: Fires when a frame is rendered.
-* __onAnimationComplete__: Fires when all loops have finished.
-* __onPlayStateChange__: Fires when the animation is played, paused, or stopped.
-* __onPlay__: Fires when the animation is `play()`ed.
-* __onPause__: Fires when the animation is `pause()`d.
-* __onStop__: Fires when the animation is `stop()`ped.
+* __beforeDraw__: Fires each frame before Actors are rendered.
+* __frameRender__: Fires when a frame is rendered.
+* __animationComplete__: Fires when all loops have finished.
+* __playStateChange__: Fires when the animation is played, paused, or stopped.
+* __play__: Fires when the animation is `play()`ed.
+* __pause__: Fires when the animation is `pause()`d.
+* __stop__: Fires when the animation is `stop()`ped.
 
 __[Example](examples/bind.html)__
 
