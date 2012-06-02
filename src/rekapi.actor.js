@@ -1,11 +1,9 @@
-var rekapiActor = function (context, deps) {
+var rekapiActor = function (context, _, Tweenable) {
+
+  'use strict';
 
   var DEFAULT_EASING = 'linear';
   var actorCount = 0;
-  var _ = (deps && deps.underscore) ? deps.underscore : context._;
-  var Tweenable = (deps && deps.Tweenable) ?
-      deps.Tweenable : context.Tweenable;
-
   var Kapi = context.Kapi;
 
 
@@ -203,7 +201,7 @@ var rekapiActor = function (context, deps) {
   // Kind of a fun way to set up an inheritance chain.  `ActorMethods` prevents
   // methods on `Actor.prototype` from polluting `Tweenable`'s prototype with
   // `Actor` specific methods.
-  ActorMethods = function () {};
+  var ActorMethods = function () {};
   ActorMethods.prototype = Tweenable.prototype;
   Actor.prototype = new ActorMethods();
   // But the magic doesn't stop here!  `Actor`'s constructor steals the

@@ -1,25 +1,32 @@
 var rekapi = function (global, deps) {
+
+  'use strict';
+
   // If `deps` is defined, it means that Rekapi is loaded via AMD.
   // Don't use global context in this case so that the global scope
   // is not polluted by the Kapi object.
   var context = deps ? {} : global;
 
-  rekapiCore(context, deps, global);
-  rekapiActor(context, deps);
-  rekapiKeyframeProperty(context, deps);
+  var _ = (deps && deps.underscore) ? deps.underscore : context._;
+  var Tweenable = (deps && deps.Tweenable) ?
+      deps.Tweenable : context.Tweenable;
+
+  rekapiCore(context, _, Tweenable);
+  rekapiActor(context, _, Tweenable);
+  rekapiKeyframeProperty(context, _, Tweenable);
 
   // Extensions
   if (typeof rekapiDOM === 'function') {
-    rekapiDOM(context, deps);
+    rekapiDOM(context, _, Tweenable);
   }
   if (typeof rekapiToCSS === 'function') {
-    rekapiToCSS(context, deps);
+    rekapiToCSS(context, _, Tweenable);
   }
   if (typeof rekapiCanvasContext === 'function') {
-    rekapiCanvasContext(context, deps);
+    rekapiCanvasContext(context, _, Tweenable);
   }
   if (typeof rekapiCanvasActor === 'function') {
-    rekapiCanvasActor(context, deps);
+    rekapiCanvasActor(context, _, Tweenable);
   }
 
   return context.Kapi;
